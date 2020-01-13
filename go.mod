@@ -1,4 +1,4 @@
-module github.com/dangkaka/go-kafka-avro
+module github.com/danlitman/go-kafka-avro
 
 go 1.12
 
