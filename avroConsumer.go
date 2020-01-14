@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"os"
 	"os/signal"
@@ -17,9 +18,10 @@ type avroConsumer struct {
 }
 
 type ConsumerCallbacks struct {
-	OnDataReceived func(msg Message) error
-	OnError        func(err error)
-	OnNotification func(notification *cluster.Notification)
+	OnDataReceived         func(msg Message) error
+	OnError                func(err error)
+	OnNotification         func(notification *cluster.Notification)
+	OnGetClientCertificate func(certificateRequest *tls.CertificateRequestInfo) (*tls.Certificate, error)
 }
 
 type Message struct {
@@ -40,6 +42,12 @@ func NewAvroConsumer(kafkaServers []string, schemaRegistryServers []string,
 	config.Group.Return.Notifications = true
 	//read from beginning at the first time
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
+	if callbacks.OnGetClientCertificate != nil {
+		config.Net.TLS.Enable = true
+		config.Net.TLS.Config.GetClientCertificate = callbacks.OnGetClientCertificate
+	}
+
 	topics := []string{topic}
 	consumer, err := cluster.NewConsumer(kafkaServers, groupId, topics, config)
 	if err != nil {
