@@ -2,11 +2,12 @@ package kafka
 
 import (
 	"encoding/binary"
-	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
-	"github.com/linkedin/goavro/v2"
 	"os"
 	"os/signal"
+
+	"github.com/Shopify/sarama"
+	cluster "github.com/bsm/sarama-cluster"
+	"github.com/linkedin/goavro/v2"
 )
 
 type avroConsumer struct {
@@ -16,7 +17,7 @@ type avroConsumer struct {
 }
 
 type ConsumerCallbacks struct {
-	OnDataReceived func(msg Message)
+	OnDataReceived func(msg Message) error
 	OnError        func(err error)
 	OnNotification func(notification *cluster.Notification)
 }
@@ -62,7 +63,7 @@ func (ac *avroConsumer) GetSchema(id int) (*goavro.Codec, error) {
 	return codec, nil
 }
 
-func (ac *avroConsumer) Consume() {
+func (ac *avroConsumer) Consume() error {
 	// trap SIGINT to trigger a shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
@@ -92,14 +93,19 @@ func (ac *avroConsumer) Consume() {
 				msg, err := ac.ProcessAvroMsg(m)
 				if err != nil {
 					ac.callbacks.OnError(err)
+					return err
+				}
+				if ac.callbacks.OnDataReceived != nil {
+					err = ac.callbacks.OnDataReceived(msg)
+					if err != nil {
+						ac.callbacks.OnError(err)
+						return err
+					}
 				}
 				ac.Consumer.MarkOffset(m, "")
-				if ac.callbacks.OnDataReceived != nil {
-					ac.callbacks.OnDataReceived(msg)
-				}
 			}
 		case <-signals:
-			return
+			return nil
 		}
 	}
 }
