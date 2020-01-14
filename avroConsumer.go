@@ -18,10 +18,9 @@ type avroConsumer struct {
 }
 
 type ConsumerCallbacks struct {
-	OnDataReceived         func(msg Message) error
-	OnError                func(err error)
-	OnNotification         func(notification *cluster.Notification)
-	OnGetClientCertificate func(certificateRequest *tls.CertificateRequestInfo) (*tls.Certificate, error)
+	OnDataReceived func(msg Message) error
+	OnError        func(err error)
+	OnNotification func(notification *cluster.Notification)
 }
 
 type Message struct {
@@ -35,7 +34,7 @@ type Message struct {
 
 // avroConsumer is a basic consumer to interact with schema registry, avro and kafka
 func NewAvroConsumer(kafkaServers []string, schemaRegistryServers []string,
-	topic string, groupId string, callbacks ConsumerCallbacks) (*avroConsumer, error) {
+	topic string, groupId string, callbacks ConsumerCallbacks, tlsConfig *tls.Config) (*avroConsumer, error) {
 	// init (custom) config, enable errors and notifications
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
@@ -43,9 +42,9 @@ func NewAvroConsumer(kafkaServers []string, schemaRegistryServers []string,
 	//read from beginning at the first time
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 
-	if callbacks.OnGetClientCertificate != nil {
+	if tlsConfig != nil {
 		config.Net.TLS.Enable = true
-		config.Net.TLS.Config.GetClientCertificate = callbacks.OnGetClientCertificate
+		config.Net.TLS.Config = tlsConfig
 	}
 
 	topics := []string{topic}
