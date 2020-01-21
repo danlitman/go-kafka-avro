@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"crypto/tls"
 	"encoding/binary"
 	"os"
 	"os/signal"
@@ -34,18 +33,7 @@ type Message struct {
 
 // avroConsumer is a basic consumer to interact with schema registry, avro and kafka
 func NewAvroConsumer(kafkaServers []string, schemaRegistryServers []string,
-	topic string, groupId string, callbacks ConsumerCallbacks, tlsConfig *tls.Config) (*avroConsumer, error) {
-	// init (custom) config, enable errors and notifications
-	config := cluster.NewConfig()
-	config.Consumer.Return.Errors = true
-	config.Group.Return.Notifications = true
-	//read from beginning at the first time
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-
-	if tlsConfig != nil {
-		config.Net.TLS.Enable = true
-		config.Net.TLS.Config = tlsConfig
-	}
+	topic string, groupId string, callbacks ConsumerCallbacks, config *cluster.Config) (*avroConsumer, error) {
 
 	topics := []string{topic}
 	consumer, err := cluster.NewConsumer(kafkaServers, groupId, topics, config)
